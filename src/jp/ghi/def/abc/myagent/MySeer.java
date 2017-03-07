@@ -128,13 +128,13 @@ public class MySeer extends MyVillager {
 	}
 
 	public String talk() {
-		// カミングアウトする日になったら，あるいは霊媒結果が人狼だったら
-		// あるいは霊媒師カミングアウトが出たらカミングアウト
+		// カミングアウトする日になったら，あるいは占い結果が人狼だったら
+		// あるいは占い師カミングアウトが出たらカミングアウト
 		if (!isCameout && (day >= comingoutDay || (!divinationQueue.isEmpty() && divinationQueue.peek().getResult() == Species.WEREWOLF) || isCo(Role.SEER))) {
 			talkQueue.offer(new Content(new ComingoutContentBuilder(me, Role.SEER)));
 			isCameout = true;
 		}
-		// カミングアウトしたらこれまでの霊媒結果をすべて公開
+		// カミングアウトしたらこれまでの占い結果をすべて公開
 		if (isCameout) {
 			while (!divinationQueue.isEmpty()) {
 				Judge ident = divinationQueue.poll();
@@ -162,3 +162,4 @@ public class MySeer extends MyVillager {
 		return randomSelect(candidates);
 	}
 }
+
