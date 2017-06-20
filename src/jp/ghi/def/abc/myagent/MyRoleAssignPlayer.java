@@ -17,10 +17,8 @@ public class MyRoleAssignPlayer extends AbstractRoleAssignPlayer {
 		setWerewolfPlayer(new MyWerewolf());
 	}
 
-	@Override
 	public String getName() {
 		return "MyRoleAssignPlayer";
 	}
 
 }
-

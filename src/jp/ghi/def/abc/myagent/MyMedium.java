@@ -18,6 +18,24 @@ public class MyMedium extends MyVillager {
 	Deque<Judge> identQueue = new LinkedList<>();
 	Map<Agent, Species> myIdentMap = new HashMap<>();
 
+	public void initialize(GameInfo gameInfo, GameSetting gameSetting) {
+		super.initialize(gameInfo, gameSetting);
+		comingoutDay = (int) (Math.random() * 3 + 1);
+		isCameout = false;
+		identQueue.clear();
+		myIdentMap.clear();
+	}
+
+	public void dayStart() {
+		super.dayStart();
+		// 霊媒結果を待ち行列に入れる
+		Judge ident = currentGameInfo.getMediumResult();
+		if (ident != null) {
+			identQueue.offer(ident);
+			myIdentMap.put(ident.getTarget(), ident.getResult());
+		}
+	}
+
 	protected void chooseVoteCandidate() {
 		werewolves.clear();
 		// 霊媒師をカミングアウトしている他のエージェントは人狼候補
@@ -53,28 +71,10 @@ public class MyMedium extends MyVillager {
 		}
 	}
 
-	public void initialize(GameInfo gameInfo, GameSetting gameSetting) {
-		super.initialize(gameInfo, gameSetting);
-		comingoutDay = (int) (Math.random() * 3 + 1);
-		isCameout = false;
-		identQueue.clear();
-		myIdentMap.clear();
-	}
-
-	public void dayStart() {
-		super.dayStart();
-		// 霊媒結果を待ち行列に入れる
-		Judge ident = currentGameInfo.getMediumResult();
-		if (ident != null) {
-			identQueue.offer(ident);
-			myIdentMap.put(ident.getTarget(), ident.getResult());
-		}
-	}
-
 	public String talk() {
 		// カミングアウトする日になったら，あるいは霊媒結果が人狼だったら
 		// あるいは霊媒師カミングアウトが出たらカミングアウト
-		if (!isCameout && (day >= comingoutDay || (!identQueue.isEmpty() && identQueue.peek().getResult() == Species.WEREWOLF) || isCo(Role.MEDIUM))) {
+		if (!isCameout && (day >= comingoutDay || (!identQueue.isEmpty() && identQueue.peekLast().getResult() == Species.WEREWOLF) || isCo(Role.MEDIUM))) {
 			talkQueue.offer(new Content(new ComingoutContentBuilder(me, Role.MEDIUM)));
 			isCameout = true;
 		}
@@ -87,4 +87,5 @@ public class MyMedium extends MyVillager {
 		}
 		return super.talk();
 	}
+
 }

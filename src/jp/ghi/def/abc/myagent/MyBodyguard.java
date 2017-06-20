@@ -59,4 +59,5 @@ public class MyBodyguard extends MyVillager {
 		guardedAgent = guardCandidate;
 		return guardCandidate;
 	}
+
 }

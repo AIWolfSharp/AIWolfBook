@@ -49,4 +49,5 @@ public class MyVillager extends MyBasePlayer {
 	public Agent guard() {
 		throw new UnsupportedOperationException();
 	}
+
 }

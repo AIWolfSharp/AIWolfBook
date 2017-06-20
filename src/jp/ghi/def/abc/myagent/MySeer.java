@@ -25,6 +25,35 @@ public class MySeer extends MyVillager {
 	List<Agent> semiWolves = new ArrayList<>();
 	List<Agent> possessedList = new ArrayList<>();
 
+	public void initialize(GameInfo gameInfo, GameSetting gameSetting) {
+		super.initialize(gameInfo, gameSetting);
+		comingoutDay = (int) (Math.random() * 3 + 1);
+		isCameout = false;
+		divinationQueue.clear();
+		myDivinationMap.clear();
+		whiteList.clear();
+		blackList.clear();
+		grayList = new ArrayList<>();
+		semiWolves.clear();
+		possessedList.clear();
+	}
+
+	public void dayStart() {
+		super.dayStart();
+		// 占い結果を待ち行列に入れる
+		Judge divination = currentGameInfo.getDivineResult();
+		if (divination != null) {
+			divinationQueue.offer(divination);
+			grayList.remove(divination.getTarget());
+			if (divination.getResult() == Species.HUMAN) {
+				whiteList.add(divination.getTarget());
+			} else {
+				blackList.add(divination.getTarget());
+			}
+			myDivinationMap.put(divination.getTarget(), divination.getResult());
+		}
+	}
+
 	protected void chooseVoteCandidate() {
 		// 生存人狼がいれば当然投票
 		List<Agent> aliveWolves = new ArrayList<>();
@@ -98,39 +127,10 @@ public class MySeer extends MyVillager {
 		}
 	}
 
-	public void initialize(GameInfo gameInfo, GameSetting gameSetting) {
-		super.initialize(gameInfo, gameSetting);
-		comingoutDay = (int) (Math.random() * 3 + 1);
-		isCameout = false;
-		divinationQueue.clear();
-		myDivinationMap.clear();
-		whiteList.clear();
-		blackList.clear();
-		grayList = new ArrayList<>();
-		semiWolves.clear();
-		possessedList.clear();
-	}
-
-	public void dayStart() {
-		super.dayStart();
-		// 占い結果を待ち行列に入れる
-		Judge divination = currentGameInfo.getDivineResult();
-		if (divination != null) {
-			divinationQueue.offer(divination);
-			grayList.remove(divination.getTarget());
-			if (divination.getResult() == Species.HUMAN) {
-				whiteList.add(divination.getTarget());
-			} else {
-				blackList.add(divination.getTarget());
-			}
-			myDivinationMap.put(divination.getTarget(), divination.getResult());
-		}
-	}
-
 	public String talk() {
 		// カミングアウトする日になったら，あるいは占い結果が人狼だったら
 		// あるいは占い師カミングアウトが出たらカミングアウト
-		if (!isCameout && (day >= comingoutDay || (!divinationQueue.isEmpty() && divinationQueue.peek().getResult() == Species.WEREWOLF) || isCo(Role.SEER))) {
+		if (!isCameout && (day >= comingoutDay || (!divinationQueue.isEmpty() && divinationQueue.peekLast().getResult() == Species.WEREWOLF) || isCo(Role.SEER))) {
 			talkQueue.offer(new Content(new ComingoutContentBuilder(me, Role.SEER)));
 			isCameout = true;
 		}
@@ -161,5 +161,6 @@ public class MySeer extends MyVillager {
 		}
 		return randomSelect(candidates);
 	}
+
 }
 

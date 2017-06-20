@@ -19,6 +19,55 @@ public class MyPossessed extends MyVillager {
 	Deque<Judge> fakeDivinationQueue = new LinkedList<>();
 	List<Agent> divinedAgents = new ArrayList<>();
 
+	public void initialize(GameInfo gameInfo, GameSetting gameSetting) {
+		super.initialize(gameInfo, gameSetting);
+		numWolves = gameSetting.getRoleNumMap().get(Role.WEREWOLF);
+		isCameout = false;
+		fakeDivinationList.clear();
+		fakeDivinationQueue.clear();
+		divinedAgents.clear();
+	}
+
+	private Judge getFakeDivination() {
+		Agent target = null;
+		List<Agent> candidates = new ArrayList<>();
+		for (Agent a : aliveOthers) {
+			if (!divinedAgents.contains(a) && comingoutMap.get(a) != Role.SEER) {
+				candidates.add(a);
+			}
+		}
+		if (!candidates.isEmpty()) {
+			target = randomSelect(candidates);
+		} else {
+			target = randomSelect(aliveOthers);
+		}
+		// 偽人狼に余裕があれば，人狼と人間の割合を勘案して，30%の確率で人狼と判定
+		Species result = Species.HUMAN;
+		int nFakeWolves = 0;
+		for (Judge j : fakeDivinationList) {
+			if (j.getResult() == Species.WEREWOLF) {
+				nFakeWolves++;
+			}
+		}
+		if (nFakeWolves < numWolves && Math.random() < 0.3) {
+			result = Species.WEREWOLF;
+		}
+		return new Judge(day, me, target, result);
+	}
+
+	public void dayStart() {
+		super.dayStart();
+		// 偽の判定
+		if (day > 0) {
+			Judge judge = getFakeDivination();
+			if (judge != null) {
+				fakeDivinationList.add(judge);
+				fakeDivinationQueue.offer(judge);
+				divinedAgents.add(judge.getTarget());
+			}
+		}
+	}
+
 	protected void chooseVoteCandidate() {
 		werewolves.clear();
 		List<Agent> candidates = new ArrayList<>();
@@ -75,28 +124,6 @@ public class MyPossessed extends MyVillager {
 		}
 	}
 
-	public void initialize(GameInfo gameInfo, GameSetting gameSetting) {
-		super.initialize(gameInfo, gameSetting);
-		numWolves = gameSetting.getRoleNumMap().get(Role.WEREWOLF);
-		isCameout = false;
-		fakeDivinationList.clear();
-		fakeDivinationQueue.clear();
-		divinedAgents.clear();
-	}
-
-	public void dayStart() {
-		super.dayStart();
-		// 偽の判定
-		if (day > 0) {
-			Judge judge = getFakeDivination();
-			if (judge != null) {
-				fakeDivinationList.add(judge);
-				fakeDivinationQueue.offer(judge);
-				divinedAgents.add(judge.getTarget());
-			}
-		}
-	}
-
 	public String talk() {
 		// 即占い師カミングアウト
 		if (!isCameout) {
@@ -113,30 +140,4 @@ public class MyPossessed extends MyVillager {
 		return super.talk();
 	}
 
-	private Judge getFakeDivination() {
-		Agent target = null;
-		List<Agent> candidates = new ArrayList<>();
-		for (Agent a : aliveOthers) {
-			if (!divinedAgents.contains(a) && comingoutMap.get(a) != Role.SEER) {
-				candidates.add(a);
-			}
-		}
-		if (!candidates.isEmpty()) {
-			target = randomSelect(candidates);
-		} else {
-			target = randomSelect(aliveOthers);
-		}
-		// 偽人狼に余裕があれば，人狼と人間の割合を勘案して，30%の確率で人狼と判定
-		Species result = Species.HUMAN;
-		int nFakeWolves = 0;
-		for (Judge j : fakeDivinationList) {
-			if (j.getResult() == Species.WEREWOLF) {
-				nFakeWolves++;
-			}
-		}
-		if (nFakeWolves < numWolves && Math.random() < 0.3) {
-			result = Species.WEREWOLF;
-		}
-		return new Judge(day, me, target, result);
-	}
 }

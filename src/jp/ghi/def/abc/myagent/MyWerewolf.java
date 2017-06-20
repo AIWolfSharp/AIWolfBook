@@ -15,7 +15,7 @@ import org.aiwolf.common.net.*;
 /**
  * 人狼役エージェントクラス
  */
-public class MyWerewolf extends MyVillager {
+public class MyWerewolf extends MyBasePlayer {
 	/** 規定人狼数 */
 	int numWolves;
 	/** 騙る役職 */
@@ -40,72 +40,6 @@ public class MyWerewolf extends MyVillager {
 	List<Agent> villagers;
 	/** talk()のターン */
 	int talkTurn;
-
-	/** 襲撃先候補を選ぶ */
-	protected void chooseAttackVoteCandidate() {
-		// カミングアウトした村人陣営は襲撃先候補
-		List<Agent> candidates = new ArrayList<>();
-		for (Agent a : villagers) {
-			if (isCo(a)) {
-				candidates.add(a);
-			}
-		}
-		// 候補がいなければ村人陣営から
-		if (candidates.isEmpty()) {
-			candidates.addAll(villagers);
-		}
-		// 村人陣営がいない場合は裏切り者を襲う
-		if (candidates.isEmpty()) {
-			candidates.addAll(possessedList);
-		}
-		if (!candidates.isEmpty()) {
-			if (!candidates.contains(attackVoteCandidate)) {
-				attackVoteCandidate = randomSelect(candidates);
-			}
-		} else {
-			attackVoteCandidate = null;
-		}
-	}
-
-	/** 投票先候補を選ぶ */
-	protected void chooseVoteCandidate() {
-		List<Agent> candidates = new ArrayList<>();
-		// 占い師/霊媒師騙りの場合
-		if (fakeRole != Role.VILLAGER) {
-			// 対抗カミングアウトした，あるいは人狼と判定した村人は投票先候補
-			for (Agent a : villagers) {
-				if (comingoutMap.get(a) == fakeRole || fakeJudgeMap.get(a) == Species.WEREWOLF) {
-					candidates.add(a);
-				}
-			}
-			// 候補がいなければ人間と判定していない村人陣営から
-			if (candidates.isEmpty()) {
-				for (Agent a : villagers) {
-					if (fakeJudgeMap.get(a) != Species.HUMAN) {
-						candidates.add(a);
-					}
-				}
-			}
-		}
-		// 村人騙り，あるいは候補がいない場合ば村人陣営から選ぶ
-		if (candidates.isEmpty()) {
-			candidates.addAll(villagers);
-		}
-		// それでも候補がいない場合は裏切り者に投票
-		if (candidates.isEmpty()) {
-			candidates.addAll(possessedList);
-		}
-		if (!candidates.isEmpty()) {
-			if (!candidates.contains(voteCandidate)) {
-				voteCandidate = randomSelect(candidates);
-				if (canTalk) {
-					talkQueue.offer(new Content(new EstimateContentBuilder(voteCandidate, Role.WEREWOLF)));
-				}
-			}
-		} else {
-			voteCandidate = null;
-		}
-	}
 
 	public void initialize(GameInfo gameInfo, GameSetting gameSetting) {
 		super.initialize(gameInfo, gameSetting);
@@ -147,6 +81,61 @@ public class MyWerewolf extends MyVillager {
 				}
 			}
 		}
+		villagers.clear();
+		for (Agent agent : aliveOthers) {
+			if (!werewolves.contains(agent) && !possessedList.contains(agent)) {
+				villagers.add(agent);
+			}
+		}
+	}
+
+	private Judge getFakeJudge() {
+		Agent target = null;
+		// 占い師騙りの場合
+		if (fakeRole == Role.SEER) {
+			List<Agent> candidates = new ArrayList<>();
+			for (Agent a : aliveOthers) {
+				if (!fakeJudgeMap.containsKey(a) && comingoutMap.get(a) != Role.SEER) {
+					candidates.add(a);
+				}
+			}
+			if (candidates.isEmpty()) {
+				target = randomSelect(aliveOthers);
+			} else {
+				target = randomSelect(candidates);
+			}
+		}
+		// 霊媒師騙りの場合
+		else if (fakeRole == Role.MEDIUM) {
+			target = currentGameInfo.getExecutedAgent();
+		}
+		if (target != null) {
+			Species result = Species.HUMAN;
+			// 人間が偽占い対象の場合
+			if (humans.contains(target)) {
+				// 偽人狼に余裕があれば
+				int nFakeWolves = 0;
+				for (Agent a : fakeJudgeMap.keySet()) {
+					if (fakeJudgeMap.get(a) == Species.WEREWOLF) {
+						nFakeWolves++;
+					}
+				}
+				if (nFakeWolves < numWolves) {
+					// 裏切り者，あるいはまだカミングアウトしていないエージェントの場合，判定は五分五分
+					if (possessedList.contains(target) || !isCo(target)) {
+						if (Math.random() < 0.5) {
+							result = Species.WEREWOLF;
+						}
+					}
+					// それ以外は人狼判定
+					else {
+						result = Species.WEREWOLF;
+					}
+				}
+			}
+			return new Judge(day, me, target, result);
+		}
+		return null;
 	}
 
 	public void dayStart() {
@@ -162,6 +151,46 @@ public class MyWerewolf extends MyVillager {
 				fakeJudgeQueue.offer(judge);
 				fakeJudgeMap.put(judge.getTarget(), judge.getResult());
 			}
+		}
+	}
+
+	/** 投票先候補を選ぶ */
+	protected void chooseVoteCandidate() {
+		List<Agent> candidates = new ArrayList<>();
+		// 占い師/霊媒師騙りの場合
+		if (fakeRole != Role.VILLAGER) {
+			// 対抗カミングアウトした，あるいは人狼と判定した村人は投票先候補
+			for (Agent a : villagers) {
+				if (comingoutMap.get(a) == fakeRole || fakeJudgeMap.get(a) == Species.WEREWOLF) {
+					candidates.add(a);
+				}
+			}
+			// 候補がいなければ人間と判定していない村人陣営から
+			if (candidates.isEmpty()) {
+				for (Agent a : villagers) {
+					if (fakeJudgeMap.get(a) != Species.HUMAN) {
+						candidates.add(a);
+					}
+				}
+			}
+		}
+		// 村人騙り，あるいは候補がいない場合ば村人陣営から選ぶ
+		if (candidates.isEmpty()) {
+			candidates.addAll(villagers);
+		}
+		// それでも候補がいない場合は裏切り者に投票
+		if (candidates.isEmpty()) {
+			candidates.addAll(possessedList);
+		}
+		if (!candidates.isEmpty()) {
+			if (!candidates.contains(voteCandidate)) {
+				voteCandidate = randomSelect(candidates);
+				if (canTalk) {
+					talkQueue.offer(new Content(new EstimateContentBuilder(voteCandidate, Role.WEREWOLF)));
+				}
+			}
+		} else {
+			voteCandidate = null;
 		}
 	}
 
@@ -211,52 +240,28 @@ public class MyWerewolf extends MyVillager {
 		return super.talk();
 	}
 
-	private Judge getFakeJudge() {
-		Agent target = null;
-		// 占い師騙りの場合
-		if (fakeRole == Role.SEER) {
-			List<Agent> candidates = new ArrayList<>();
-			for (Agent a : aliveOthers) {
-				if (!fakeJudgeMap.containsKey(a) && comingoutMap.get(a) != Role.SEER) {
-					candidates.add(a);
-				}
-			}
-			if (candidates.isEmpty()) {
-				target = randomSelect(aliveOthers);
-			} else {
-				target = randomSelect(candidates);
+	/** 襲撃先候補を選ぶ */
+	protected void chooseAttackVoteCandidate() {
+		// カミングアウトした村人陣営は襲撃先候補
+		List<Agent> candidates = new ArrayList<>();
+		for (Agent a : villagers) {
+			if (isCo(a)) {
+				candidates.add(a);
 			}
 		}
-		// 霊媒師騙りの場合
-		else if (fakeRole == Role.MEDIUM) {
-			target = currentGameInfo.getExecutedAgent();
+		// 候補がいなければ村人陣営から
+		if (candidates.isEmpty()) {
+			candidates.addAll(villagers);
 		}
-		if (target != null) {
-			Species result = Species.HUMAN;
-			// 人間が偽占い対象の場合
-			if (humans.contains(target)) {
-				// 偽人狼に余裕があれば
-				int nFakeWolves = 0;
-				for (Agent a : fakeJudgeMap.keySet()) {
-					if (fakeJudgeMap.get(a) == Species.WEREWOLF) {
-						nFakeWolves++;
-					}
-				}
-				if (nFakeWolves < numWolves) {
-					// 裏切り者，あるいはまだカミングアウトしていないエージェントの場合，判定は五分五分
-					if (possessedList.contains(target) || !isCo(target)) {
-						if (Math.random() < 0.5) {
-							result = Species.WEREWOLF;
-						}
-					}
-					// それ以外は人狼判定
-					else {
-						result = Species.WEREWOLF;
-					}
-				}
-				return new Judge(day, me, target, result);
-			}
+		// 村人陣営がいない場合は裏切り者を襲う
+		if (candidates.isEmpty()) {
+			candidates.addAll(possessedList);
 		}
-		return null;
+		if (!candidates.isEmpty()) {
+			attackVoteCandidate = randomSelect(candidates);
+		} else {
+			attackVoteCandidate = null;
+		}
 	}
+
 }

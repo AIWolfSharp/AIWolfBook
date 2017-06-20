@@ -54,6 +54,45 @@ public class MyBasePlayer implements Player {
 	/** 人狼リスト */
 	List<Agent> werewolves = new ArrayList<>();
 
+	/** エージェントが生きているかどうかを返す */
+	protected boolean isAlive(Agent agent) {
+		return currentGameInfo.getStatusMap().get(agent) == Status.ALIVE;
+	}
+
+	/** エージェントが殺されたかどうかを返す */
+	protected boolean isKilled(Agent agent) {
+		return killedAgents.contains(agent);
+	}
+
+	/** エージェントがカミングアウトしたかどうかを返す */
+	protected boolean isCo(Agent agent) {
+		return comingoutMap.containsKey(agent);
+	}
+
+	/** 役職がカミングアウトされたかどうかを返す */
+	protected boolean isCo(Role role) {
+		return comingoutMap.containsValue(role);
+	}
+
+	/** エージェントが人間かどうかを返す */
+	protected boolean isHuman(Agent agent) {
+		return humans.contains(agent);
+	}
+
+	/** エージェントが人狼かどうかを返す */
+	protected boolean isWerewolf(Agent agent) {
+		return werewolves.contains(agent);
+	}
+
+	/** リストからランダムに選んで返す */
+	protected <T> T randomSelect(List<T> list) {
+		if (list.isEmpty()) {
+			return null;
+		} else {
+			return list.get((int) (Math.random() * list.size()));
+		}
+	}
+
 	public String getName() {
 		return "MyBasePlayer";
 	}
@@ -70,6 +109,41 @@ public class MyBasePlayer implements Player {
 		comingoutMap.clear();
 		humans.clear();
 		werewolves.clear();
+	}
+
+	public void update(GameInfo gameInfo) {
+		currentGameInfo = gameInfo;
+		// 1日の最初の呼び出しはdayStart()の前なので何もしない
+		if (currentGameInfo.getDay() == day + 1) {
+			day = currentGameInfo.getDay();
+			return;
+		}
+		// 2回目の呼び出し以降
+		// （夜限定）追放されたエージェントを登録
+		addExecutedAgent(currentGameInfo.getLatestExecutedAgent());
+		// GameInfo.talkListからカミングアウト・占い報告・霊媒報告を抽出
+		for (int i = talkListHead; i < currentGameInfo.getTalkList().size(); i++) {
+			Talk talk = currentGameInfo.getTalkList().get(i);
+			Agent talker = talk.getAgent();
+			if (talker == me) {
+				continue;
+			}
+			Content content = new Content(talk.getText());
+			switch (content.getTopic()) {
+			case COMINGOUT:
+				comingoutMap.put(talker, content.getRole());
+				break;
+			case DIVINED:
+				divinationList.add(new Judge(day, talker, content.getTarget(), content.getResult()));
+				break;
+			case IDENTIFIED:
+				identList.add(new Judge(day, talker, content.getTarget(), content.getResult()));
+				break;
+			default:
+				break;
+			}
+		}
+		talkListHead = currentGameInfo.getTalkList().size();
 	}
 
 	public void dayStart() {
@@ -111,39 +185,8 @@ public class MyBasePlayer implements Player {
 		}
 	}
 
-	public void update(GameInfo gameInfo) {
-		currentGameInfo = gameInfo;
-		// 1日の最初の呼び出しはdayStart()の前なので何もしない
-		if (currentGameInfo.getDay() == day + 1) {
-			day = currentGameInfo.getDay();
-			return;
-		}
-		// 2回目の呼び出し以降
-		// （夜限定）追放されたエージェントを登録
-		addExecutedAgent(currentGameInfo.getLatestExecutedAgent());
-		// GameInfo.talkListからカミングアウト・占い報告・霊媒報告を抽出
-		for (int i = talkListHead; i < currentGameInfo.getTalkList().size(); i++) {
-			Talk talk = currentGameInfo.getTalkList().get(i);
-			Agent talker = talk.getAgent();
-			if (talker == me) {
-				continue;
-			}
-			Content content = new Content(talk.getText());
-			switch (content.getTopic()) {
-			case COMINGOUT:
-				comingoutMap.put(talker, content.getRole());
-				break;
-			case DIVINED:
-				divinationList.add(new Judge(day, talker, content.getTarget(), content.getResult()));
-				break;
-			case IDENTIFIED:
-				identList.add(new Judge(day, talker, content.getTarget(), content.getResult()));
-				break;
-			default:
-				break;
-			}
-		}
-		talkListHead = currentGameInfo.getTalkList().size();
+	/** 投票先候補を選びvoteCandidateにセットする */
+	protected void chooseVoteCandidate() {
 	}
 
 	public String talk() {
@@ -153,6 +196,10 @@ public class MyBasePlayer implements Player {
 			declaredVoteCandidate = voteCandidate;
 		}
 		return talkQueue.isEmpty() ? Talk.SKIP : talkQueue.poll().getText();
+	}
+
+	/** 襲撃先候補を選びattackVoteCandidateにセットする */
+	protected void chooseAttackVoteCandidate() {
 	}
 
 	public String whisper() {
@@ -188,50 +235,4 @@ public class MyBasePlayer implements Player {
 	public void finish() {
 	}
 
-	/** 投票先候補を選びvoteCandidateにセットする */
-	protected void chooseVoteCandidate() {
-	}
-
-	/** 襲撃先候補を選びattackVoteCandidateにセットする */
-	protected void chooseAttackVoteCandidate() {
-	}
-
-	/** エージェントが生きているかどうかを返す */
-	protected boolean isAlive(Agent agent) {
-		return currentGameInfo.getStatusMap().get(agent) == Status.ALIVE;
-	}
-
-	/** エージェントが殺されたかどうかを返す */
-	protected boolean isKilled(Agent agent) {
-		return killedAgents.contains(agent);
-	}
-
-	/** エージェントがカミングアウトしたかどうかを返す */
-	protected boolean isCo(Agent agent) {
-		return comingoutMap.containsKey(agent);
-	}
-
-	/** 役職がカミングアウトされたかどうかを返す */
-	protected boolean isCo(Role role) {
-		return comingoutMap.containsValue(role);
-	}
-
-	/** エージェントが人間かどうかを返す */
-	protected boolean isHuman(Agent agent) {
-		return humans.contains(agent);
-	}
-
-	/** エージェントが人狼かどうかを返す */
-	protected boolean isWerewolf(Agent agent) {
-		return werewolves.contains(agent);
-	}
-
-	/** リストからランダムに選んで返す */
-	protected <T> T randomSelect(List<T> list) {
-		if (list.isEmpty()) {
-			return null;
-		} else {
-			return list.get((int) (Math.random() * list.size()));
-		}
-	}
 }
