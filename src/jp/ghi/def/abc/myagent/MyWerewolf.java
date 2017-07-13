@@ -37,7 +37,7 @@ public class MyWerewolf extends MyBasePlayer {
 	/** 人間リスト */
 	List<Agent> humans;
 	/** 村人リスト */
-	List<Agent> villagers;
+	List<Agent> villagers = new ArrayList<>();
 	/** talk()のターン */
 	int talkTurn;
 
