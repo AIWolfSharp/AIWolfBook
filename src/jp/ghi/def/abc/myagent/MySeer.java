@@ -7,9 +7,18 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.aiwolf.client.lib.*;
-import org.aiwolf.common.data.*;
-import org.aiwolf.common.net.*;
+import org.aiwolf.client.lib.ComingoutContentBuilder;
+import org.aiwolf.client.lib.Content;
+import org.aiwolf.client.lib.DivinedResultContentBuilder;
+import org.aiwolf.client.lib.EstimateContentBuilder;
+import org.aiwolf.client.lib.RequestContentBuilder;
+import org.aiwolf.client.lib.VoteContentBuilder;
+import org.aiwolf.common.data.Agent;
+import org.aiwolf.common.data.Judge;
+import org.aiwolf.common.data.Role;
+import org.aiwolf.common.data.Species;
+import org.aiwolf.common.net.GameInfo;
+import org.aiwolf.common.net.GameSetting;
 
 /**
  * 占い師役エージェントクラス
@@ -33,7 +42,7 @@ public class MySeer extends MyVillager {
 		myDivinationMap.clear();
 		whiteList.clear();
 		blackList.clear();
-		grayList = new ArrayList<>();
+		grayList = new ArrayList<>(aliveOthers);
 		semiWolves.clear();
 		possessedList.clear();
 	}
@@ -163,4 +172,3 @@ public class MySeer extends MyVillager {
 	}
 
 }
-
